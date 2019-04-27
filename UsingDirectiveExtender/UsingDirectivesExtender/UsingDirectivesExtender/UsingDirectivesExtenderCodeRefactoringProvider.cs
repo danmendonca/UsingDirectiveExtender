@@ -52,7 +52,7 @@ namespace UsingDirectivesExtender
             }
 
             //this.RegisterRefactorForProject(context);
-            this.RegisterRefactorForSolution(context);
+            //this.RegisterRefactorForSolution(context);
         }        
 
         private void RegisterRefactorForSolution(CodeRefactoringContext context)
