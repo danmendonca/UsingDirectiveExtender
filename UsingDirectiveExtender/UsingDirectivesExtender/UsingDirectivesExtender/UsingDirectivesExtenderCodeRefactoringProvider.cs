@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Composition;
 using System.Linq;
@@ -50,7 +51,36 @@ namespace UsingDirectivesExtender
                 }
             }
 
-            this.RegisterRefactorForProject(context);
+            //this.RegisterRefactorForProject(context);
+            this.RegisterRefactorForSolution(context);
+        }        
+
+        private void RegisterRefactorForSolution(CodeRefactoringContext context)
+        {
+            var action = CodeAction.Create(
+                "Convert solution using directives to FullName",
+                c => this.GetSolutionWithFullNameUsingsAsync(context.Document.Project.Solution, c));
+
+            context.RegisterRefactoring(action);
+        }
+        
+        private void RegisterRefactorForProject(CodeRefactoringContext context)
+        {
+            var action = CodeAction.Create("Convert Project usings to FullName",
+                c => this.GetProjectWithFullNameUsingsAsync(context.Document.Project, c));
+
+            // Register this code action.
+            context.RegisterRefactoring(action);
+        }
+
+        private void RegisterRefactorForDocument(CodeRefactoringContext context, SyntaxNode root)
+        {
+            var action = CodeAction.Create(
+            "Convert document using directives to full name",
+            c => this.GetDocumentUsingToFullName(context.Document, c));
+
+            // Register this code action.
+            context.RegisterRefactoring(action);
         }
 
         private void RegisterSingularRefactorAction(
@@ -71,23 +101,20 @@ namespace UsingDirectivesExtender
             context.RegisterRefactoring(action);
         }
 
-        private void RegisterRefactorForDocument(CodeRefactoringContext context, SyntaxNode root)
+        private async Task<Solution> GetSolutionWithFullNameUsingsAsync(Solution solution, CancellationToken c)
         {
-            var action = CodeAction.Create(
-            "Convert document using directives to full name",
-            c => this.GetDocumentUsingToFullName(context.Document, c));
+            var newSolution = solution;
+            var projectsIds = solution.ProjectIds;
+            foreach (var projectId in projectsIds)
+            {
+                var project = newSolution.Projects.FirstOrDefault(p => p.Id == projectId);
+                if(project != default(Project))
+                {
+                    newSolution = await this.GetProjectWithFullNameUsingsAsync(project, c).ConfigureAwait(false);
+                }
+            }
 
-            // Register this code action.
-            context.RegisterRefactoring(action);
-        }
-
-        private void RegisterRefactorForProject(CodeRefactoringContext context)
-        {
-            var action = CodeAction.Create("Convert Project usings to FullName",
-                c => this.GetProjectWithFullNameUsingsAsync(context.Document.Project, c));
-
-            // Register this code action.
-            context.RegisterRefactoring(action);
+            return newSolution;
         }
 
         private async Task<Solution> GetProjectWithFullNameUsingsAsync(Project project, CancellationToken c)
