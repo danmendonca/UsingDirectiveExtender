@@ -6,9 +6,25 @@ namespace UsingDirectivesExtender
 {
     public class UsingRemoverRewriter : CSharpSyntaxRewriter
     {
+        bool isToRemove = false;
+
+        public override SyntaxNode VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+        {
+            this.isToRemove = true;
+            var syntaxNode = base.VisitNamespaceDeclaration(node);
+            this.isToRemove = false;
+
+            return syntaxNode;
+        }
+
         public override SyntaxNode VisitUsingDirective(UsingDirectiveSyntax node)
         {
-            return null;
+            if (isToRemove)
+            {
+                return null;
+            }
+
+            return base.VisitUsingDirective(node);
         }
     }
 }

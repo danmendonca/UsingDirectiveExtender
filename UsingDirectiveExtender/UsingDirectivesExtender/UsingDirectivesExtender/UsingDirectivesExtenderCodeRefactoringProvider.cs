@@ -187,11 +187,13 @@ namespace UsingDirectivesExtender
             usingVisitor.Visit(root);
 
             var newUsings = this.GetNewUsings(usingVisitor.Usings, semanticModel);
+            var globalUsings = this.GetNewUsings(usingVisitor.GlobalOrExternalUsings, semanticModel);
             var aliasUsings = this.GetNewUsings(usingVisitor.UsingsWithAlias, semanticModel);
             var newSystemusings = this.GetNewUsings(usingVisitor.SystemUsings, semanticModel);
 
             var usingsToAdd = new List<UsingDirectiveSyntax>();
             usingsToAdd.AddRange(newSystemusings);
+            usingsToAdd.AddRange(globalUsings);
             usingsToAdd.AddRange(newUsings);
             usingsToAdd.AddRange(aliasUsings);
 

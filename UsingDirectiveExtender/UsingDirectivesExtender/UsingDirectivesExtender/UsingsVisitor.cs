@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -9,15 +10,11 @@ namespace UsingDirectivesExtender
     {
         private const string SystemUsing = "System";
 
-        private readonly List<UsingDirectiveSyntax> systemUsings = new List<UsingDirectiveSyntax>();
+        private bool isCandidate = false;
 
-        public List<UsingDirectiveSyntax> SystemUsings
-        {
-            get
-            {
-                return this.systemUsings.OrderBy(u => u.ToString()).ToList();
-            }
-        }
+        public List<UsingDirectiveSyntax> SystemUsings { get; } = new List<UsingDirectiveSyntax>();
+
+        public List<UsingDirectiveSyntax> GlobalOrExternalUsings { get; } = new List<UsingDirectiveSyntax>();
 
         public List<UsingDirectiveSyntax> Usings { get; } = new List<UsingDirectiveSyntax>();
 
@@ -28,7 +25,8 @@ namespace UsingDirectivesExtender
             get
             {
                 var allUsings = new List<UsingDirectiveSyntax>();
-                allUsings.AddRange(this.systemUsings);
+                allUsings.AddRange(this.SystemUsings);
+                allUsings.AddRange(this.GlobalOrExternalUsings);
                 allUsings.AddRange(this.Usings);
                 allUsings.AddRange(this.UsingsWithAlias);
 
@@ -36,9 +34,25 @@ namespace UsingDirectivesExtender
             }
         }
 
+        public override void VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
+        {
+            this.isCandidate = true;
+            base.VisitNamespaceDeclaration(node);
+            this.isCandidate = false;
+        }
+
         public override void VisitUsingDirective(UsingDirectiveSyntax node)
         {
-            if (node
+            if(!isCandidate)
+            {
+                base.VisitUsingDirective(node);
+            }
+
+            if (IsGlobalOrExternal(node))
+            {
+                this.GlobalOrExternalUsings.Add(node);
+            }
+            else if (node
                 .ChildNodes()
                 .OfType<NameEqualsSyntax>()
                 .Any())
@@ -47,12 +61,18 @@ namespace UsingDirectivesExtender
             }
             else if (this.IsSystemUsing(node))
             {
-                this.systemUsings.Add(node);
+                this.SystemUsings.Add(node);
             }
             else
             {
                 this.Usings.Add(node);
             }
+        }
+
+        private static bool IsGlobalOrExternal(UsingDirectiveSyntax node)
+        {
+            return node.DescendantNodes().OfType<AliasQualifiedNameSyntax>().Any()
+                || node.DescendantNodes().OfType<ExternAliasDirectiveSyntax>().Any();
         }
 
         private bool IsSystemUsing(UsingDirectiveSyntax node)
